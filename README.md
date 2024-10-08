@@ -1,7 +1,7 @@
-
 # BMP280 + AHT20 + OLED Display (Arduino Project)
 
 This Arduino project reads temperature, humidity, and pressure from the AHT20 and BMP280 sensors and displays the values on an OLED screen (SSD1306). The code also prints the data to the Serial Monitor for debugging purposes.
+![photo_2024-10-08_15-04-46](https://github.com/user-attachments/assets/7ea75ab0-1bb3-4fc4-bd34-694010e7ae16)
 
 ## Features
 - Reads **temperature** and **humidity** from the AHT20 sensor.
