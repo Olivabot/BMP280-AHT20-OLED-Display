@@ -4,112 +4,104 @@
 #include <Adafruit_AHTX0.h>
 #include <Adafruit_BMP280.h>
 
-// OLED display width and height
+// === OLED CONFIG ===
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
-#define SCREEN_ADDRESS 0x3C  // I2C address for the OLED
+#define SCREEN_ADDRESS 0x3C
 
-// Create objects for the sensors
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);  // OLED object
-Adafruit_AHTX0 aht;  // AHT20 sensor object
-Adafruit_BMP280 bmp;  // BMP280 sensor object
+// === OBJECTS ===
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_AHTX0 aht;
+Adafruit_BMP280 bmp;
 
 void setup() {
   Serial.begin(115200);
-  Serial.println(F("BMP280 + AHT20 + OLED Test"));
+  Serial.println(F("Starting sensors..."));
 
-  // Initialize the OLED display
+  // === OLED INIT ===
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    while (1);  // Stop if OLED can't be initialized
+    Serial.println(F("OLED fail"));
+    while (1);
   }
-  display.clearDisplay();  // Clear the display
+  display.clearDisplay();
   display.display();
 
-  // Initialize the AHT20 sensor
+  // === AHT20 INIT ===
   if (!aht.begin()) {
-    Serial.println(F("AHT20 not found!"));
-    while (1);  // Stop if AHT20 can't be initialized
+    Serial.println(F("AHT20 not found"));
+    while (1);
   }
-  Serial.println(F("AHT20 found and initialized"));
+  Serial.println(F("AHT20 ready"));
 
-  // Initialize the BMP280 sensor (try address 0x76 first, then 0x77)
+  // === BMP280 INIT ===
   if (!bmp.begin(0x76)) {
     if (!bmp.begin(0x77)) {
-      Serial.println(F("BMP280 not found!"));
-      while (1);  // Stop if BMP280 can't be initialized
+      Serial.println(F("BMP280 not found"));
+      while (1);
     }
   }
-  Serial.println(F("BMP280 found and initialized"));
+  Serial.println(F("BMP280 ready"));
 }
 
 void loop() {
-  // Read temperature and humidity from AHT20
+  // === READ SENSOR VALUES ===
   sensors_event_t humidity, temp;
-  aht.getEvent(&humidity, &temp);  // Get the temperature and humidity events
+  aht.getEvent(&humidity, &temp);                  // AHT20 temp & RH
+  float t1 = temp.temperature;                     // °C
+  float t2 = bmp.readTemperature();                // BMP280 temp °C
+  float avgTemp = (t1 + t2) / 2.0;                 // Average temperature
 
-  // Read temperature and pressure from BMP280
-  float bmpTemperature = bmp.readTemperature();
-  float pressure = bmp.readPressure() / 100.0F;  // Convert pressure from Pa to hPa
-  float pressureAtm = pressure / 1013.25;  // Convert hPa to atm (1 atm = 1013.25 hPa)
+  float pressurePa = bmp.readPressure();           // Pa
+  float pressureAtm = pressurePa / 101325.0;       // atm
 
-  // Display the values on the OLED
-  display.clearDisplay();  // Clear the OLED display
-  display.setTextSize(1);  // Set text size
-  display.setTextColor(SSD1306_WHITE);  // Set text color
+  // === OLED DISPLAY ===
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
 
-  // Display humidity from AHT20
   display.setCursor(0, 0);
+  display.println("ENV SENSOR READOUT");
+
+  display.setCursor(0, 12);
+  display.print("Avg Temp: ");
+  display.print(avgTemp, 1);
+  display.println(" C");
+
+  display.setCursor(0, 22);
   display.print("Humidity: ");
-  display.print(humidity.relative_humidity);
+  display.print(humidity.relative_humidity, 1);
   display.println(" %");
 
-  // Display temperature from AHT20
-  display.setCursor(0, 10);
-  display.print("Temp(AHT20): ");
-  display.print(temp.temperature);
-  display.println(" C");
-
-  // Display temperature from BMP280
-  display.setCursor(0, 20);
-  display.print("Temp(BMP280): ");
-  display.print(bmpTemperature);
-  display.println(" C");
-
-  // Display pressure in atm from BMP280
-  display.setCursor(0, 30);
+  display.setCursor(0, 32);
   display.print("Pressure: ");
-  display.print(pressureAtm);
+  display.print(pressurePa, 0);
+  display.println(" Pa");
+
+  display.setCursor(0, 42);
+  display.print("           ");
+  display.print(pressureAtm, 3);
   display.println(" atm");
 
-    // Display pressure from BMP280
-  display.setCursor(0, 40);
-  display.print("Pressure: ");
-  display.print(pressure);
-  display.println(" hPa");
-
-  // Update the display with new data
   display.display();
 
-  // Print the same information to the Serial Monitor for debugging
-  Serial.print("Temp (AHT20): ");
-  Serial.print(temp.temperature);
-  Serial.println(" C");
+  // === SERIAL DEBUG ===
+  Serial.print("Temp AHT20: ");
+  Serial.print(t1);
+  Serial.print(" C | BMP280: ");
+  Serial.print(t2);
+  Serial.print(" C | Avg: ");
+  Serial.println(avgTemp);
 
   Serial.print("Humidity: ");
   Serial.print(humidity.relative_humidity);
   Serial.println(" %");
 
-  Serial.print("Temp (BMP280): ");
-  Serial.print(bmpTemperature);
-  Serial.println(" C");
-
   Serial.print("Pressure: ");
-  Serial.print(pressureAtm);
-  Serial.println(" atm; ");
-  Serial.print(pressure);
-  Serial.println(" hPa");
+  Serial.print(pressurePa);
+  Serial.print(" Pa | ");
+  Serial.print(pressureAtm, 4);
+  Serial.println(" atm");
 
-  delay(1000);  // Wait for 2 seconds before the next reading
+  delay(1000); // Wait 1 second
 }
